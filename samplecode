@@ -1,0 +1,28 @@
+import boto3
+
+bucket_name = 'my-source-bucket'
+destination_bucket_name = 'my-destination-bucket'
+
+s3_source = boto3.client('s3')
+s3_destination = boto3.client('s3')
+
+def lambda_handler(event, context):
+    objects = s3_source.list_objects_v2(Bucket=bucket_name)
+    
+    if 'Contents' not in objects:
+        return {'statusCode': 404, 'body': 'No objects found in source bucket'}
+    
+    for obj in objects['Contents']:
+        copy_source = {'Bucket': bucket_name, 'Key': obj['Key']}
+        
+        try:
+            s3_destination.copy_object(
+                CopySource=copy_source,
+                Bucket=destination_bucket_name,
+                Key=obj['Key']
+            )
+            print(f"Copied {obj['Key']} to {destination_bucket_name}")
+        except Exception as e:
+            print(f"Error copying {obj['Key']}: {e}")
+
+    return {'statusCode': 200, 'body': 'Replication completed'}
